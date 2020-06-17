@@ -21,6 +21,7 @@ public class MusicService extends Service {
     int status = 0x11;  //定义音乐播放状态，0x11代表没有播放，0x12代表正在播放，0x13代表暂停
     int current = 0; // 记录当前正在播放的音乐
     int control=0;
+    int progressList=0;
     private MediaPlayer mediaPlayer;
     private Boolean progressStatus = false;
     //public final IBinder binder = (IBinder) new MusicController();
@@ -87,12 +88,14 @@ public class MusicService extends Service {
             @Override
             public void run() {
                 //实例化一个Message对象
-                if(progressStatus) {
+                if(progressStatus) {//进度条状态，拖动进度条时暂停发送
                     return;
                 }
-                if(status == 0x12||status == 0x13){
+               // if(status == 0x12||status == 0x13){
+                if(mediaPlayer.isPlaying()){
                     Intent sendIntent = new Intent(MainActivity.UPDATE_ACTION);
                     int CurrentPosition=mediaPlayer.getCurrentPosition();
+                    progressList=CurrentPosition;
                     int MusicDirector=mediaPlayer.getDuration();
                     sendIntent.putExtra("current", current);
                     sendIntent.putExtra("update", status);
@@ -100,7 +103,6 @@ public class MusicService extends Service {
                     sendIntent.putExtra("MusicDirector", MusicDirector);
                     //发送广播，将被Activity中的BroadcastReceiver接收到
                     sendBroadcast(sendIntent);
-
 
                 }
             }
@@ -136,10 +138,8 @@ public class MusicService extends Service {
             int ctlCurrent = intent.getIntExtra("ctlCurrent", -1);
             int progress = intent.getIntExtra("progress", -1);
             progressStatus=intent.getBooleanExtra("progressStatus",false);
-            if( status == 0x12){
-                mediaPlayer.seekTo(progress);
-            }
-            //Log.d(TAG, "onReceive: ctlCurrent"+ctlCurrent);
+
+            //Log.d(TAG, "onReceive: status"+status);
             if(ctlCurrent>=0){
                 current=ctlCurrent;
             }
@@ -155,12 +155,19 @@ public class MusicService extends Service {
                     //原来处于播放状态
                     else if (status == 0x12){
                         //暂停
+                        //progressList=mediaPlayer.getCurrentPosition();
+                        Log.d(TAG, "onReceive: getCurrentPosition:"+mediaPlayer.getCurrentPosition());
+                        Log.d(TAG, "onReceive: progress12:"+progressList);
                         mediaPlayer.pause();
                         status = 0x13; // 改变为暂停状态
                     }
                     //原来处于暂停状态
                     else if (status == 0x13){
                         //播放
+                        Log.d(TAG, "onReceive: progress13:"+progressList);
+                        if(progress==-1){
+                            mediaPlayer.seekTo(progressList);
+                        }
                         mediaPlayer.start();
                         status = 0x12; // 改变状态
                     }
@@ -183,7 +190,7 @@ public class MusicService extends Service {
                     break;
                 case 4: // 上一曲
                     int CurrentPosition=mediaPlayer.getCurrentPosition();
-
+                    //Log.d(TAG, "onReceive: CurrentPosition："+CurrentPosition);
                     if(CurrentPosition>2) {
                         prepareAndPlay(musics[current]);
                         status = 0x12;
@@ -201,9 +208,25 @@ public class MusicService extends Service {
                     break;
                 case 5: // 下一曲
                     current++;
+                    if (current >= musics.length) {
+                        current = 0;
+                    }
                     prepareAndPlay(musics[current]);
                     status = 0x12;
                     control=1;
+                    break;
+                case 6: // 拖动进度条
+                    if( mediaPlayer.isPlaying()){
+                        mediaPlayer.seekTo(progress);
+                        Log.d(TAG, "onReceive: 播放拖动："+progress);
+                    }else if(status>0x11){
+
+                        mediaPlayer.seekTo(progress);
+                        Log.d(TAG, "onReceive: 暂停拖动："+progress);
+                        mediaPlayer.start();
+                        status = 0x12; // 改变状态
+                    }
+                    control = 1;
                     break;
             }
             //广播通知Activity更改图标、文本框
@@ -284,7 +307,6 @@ public class MusicService extends Service {
                     sendIntent.putExtra("MusicDirector", MusicDirector);
                     //发送广播，将被Activity中的BroadcastReceiver接收到
                     sendBroadcast(sendIntent);
-
 
                 }
             });

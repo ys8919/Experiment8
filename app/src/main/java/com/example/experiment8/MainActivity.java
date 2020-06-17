@@ -167,6 +167,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onStartTrackingTouch(SeekBar seekBar) {
         Intent intent = new Intent(CTL_ACTION);
         intent.putExtra("progressStatus", true);
+        //intent.putExtra("control", 6);
         sendBroadcast(intent);
 
     }
@@ -176,6 +177,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Intent intent = new Intent(CTL_ACTION);
         intent.putExtra("progress", seekBar.getProgress());
         intent.putExtra("progressStatus", false);
+        intent.putExtra("control", 6);
         sendBroadcast(intent);
     }
 
